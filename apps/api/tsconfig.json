@@ -4,7 +4,15 @@
     "module": "CommonJS",
     "outDir": "dist",
     "baseUrl": "src",
-    "incremental": true
+    "incremental": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "paths": {
+      "@erp-saas/db": ["../../packages/db/src/index.ts"],
+      "@erp-saas/db/*": ["../../packages/db/src/*"],
+      "@erp-saas/ai": ["../../packages/ai/src/index.ts"],
+      "@erp-saas/ai/*": ["../../packages/ai/src/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

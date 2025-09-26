@@ -6,9 +6,10 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "test": "node -e \"console.log('No tests defined for @erp-saas/api')\""
+    "test": "jest --runInBand"
   },
   "dependencies": {
+    "@erp-saas/ai": "workspace:*",
     "@erp-saas/db": "workspace:*",
     "@nestjs/common": "^10.3.2",
     "@nestjs/config": "^3.1.1",
@@ -35,9 +36,11 @@
     "@nestjs/cli": "^10.3.2",
     "@nestjs/schematics": "^10.0.1",
     "@nestjs/testing": "^10.3.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.5",
+    "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^2.0.15",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
