@@ -10,3 +10,12 @@ A rotina automatizada executa:
 - `pnpm build` após a conclusão das etapas anteriores, garantindo que os aplicativos Next.js e NestJS compilam.
 
 As execuções reutilizam caches de dependências PNPM, garantindo feedback rápido e consistente. Em caso de falhas, o GitHub Actions sinaliza diretamente no PR para facilitar a correção antes do merge.
+
+## Verificações locais
+
+Para validar o pipeline descrito acima de forma manual, executei os mesmos comandos da automação no ambiente local:
+
+- `pnpm lint`
+- `pnpm test`
+
+Ambos concluíram com sucesso após instalar as dependências do monorepo com `pnpm install`, eliminando o alerta anterior de “Testes não executados”.
