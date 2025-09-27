@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
-    "lint": "eslint 'src/**/*.{ts,tsx}'",
+    "lint": "node ./scripts/run-lint.mjs 'src/**/*.{ts,tsx}'",
     "test": "jest --runInBand"
   },
   "dependencies": {
