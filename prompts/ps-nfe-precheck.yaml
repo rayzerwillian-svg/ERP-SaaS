@@ -1,0 +1,20 @@
+id: ps-nfe-precheck
+name: Pré-validação NF-e
+scope: modulo
+entities: ["{nf}","{supplier}","{item}"]
+inputs:
+  nfId: string
+output: json
+llmPreset:
+  model: command-r
+  mode: json
+  temperature: 0.2
+ragCollections: ["ncm_br","cfop_rules","cst_icms","iss_rules_sp"]
+tools: ["postComment","blockEmission","openTask"]
+policy:
+  maskPII: true
+  retainLogsDays: 90
+version: "1.0.0"
+ownerRole: fiscal
+reviewers: ["admin","fiscal"]
+status: approved

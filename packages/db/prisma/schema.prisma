@@ -1,0 +1,798 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id        String   @id @default(uuid())
+  nome      String
+  createdAt DateTime @default(now())
+  users     User[]
+  complianceMonitoramentos ComplianceMonitoring[]
+  complianceAlertas        ComplianceAlert[]
+  complianceRiscos         ComplianceRiskAssessment[]
+  complianceRelatorios     ComplianceReport[]
+  complianceAuditorias     ComplianceAuditLog[]
+  complianceWorkflows      ComplianceWorkflow[]
+  compliancePoliticas      CompliancePolicy[]
+  complianceTreinamentos   ComplianceTraining[]
+  complianceIncidentes     ComplianceIncident[]
+  complianceCenarios       ComplianceScenario[]
+  securitySettings         SecuritySettings?
+  securityIncidentes       SecurityIncident[]
+  securityTreinamentos     SecurityTraining[]
+  securityLogs             SecurityAuditLog[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  nome      String
+  hash      String   @default("")
+  role      String   @default("viewer")
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  accounts  Account[]
+  sessions  Session[]
+
+  @@map("Usuario")
+}
+
+model UnidadeMedida {
+  id        String                @id @default(uuid())
+  sigla     String
+  descricao String
+  produtosVenda ProdutoVendaDireta[]
+  produtosProcessados ProdutoProcessado[]
+  fichaItens FichaItem[]
+}
+
+model Fornecedor {
+  id       String  @id @default(uuid())
+  nome     String
+  cnpj     String?
+  email    String?
+  telefone String?
+  produtos ProdutoVendaDireta[]
+}
+
+model ProdutoVendaDireta {
+  id                 String                        @id @default(uuid())
+  codigo             String                        @unique
+  descricao          String
+  fornecedorId       String?
+  fornecedor         Fornecedor?                   @relation(fields: [fornecedorId], references: [id])
+  unidadeMedidaId    String
+  unidade            UnidadeMedida                 @relation(fields: [unidadeMedidaId], references: [id])
+  qtdPorEmbalagem    Decimal                       @db.Decimal(10, 3)
+  precoPorUn         Decimal                       @db.Decimal(10, 2)
+  precoPorMedida     Decimal                       @db.Decimal(10, 2)
+  medida             Decimal                       @db.Decimal(10, 3)
+  fichasMateriaPrima FichaItem[]                   @relation("FichaMateriaPrima")
+  processados        ProdutoProcessadoMateriaPrima[]
+}
+
+model ProdutoProcessado {
+  id                 String                        @id @default(uuid())
+  codigo             String                        @unique
+  unidadeMedidaId    String
+  unidade            UnidadeMedida                 @relation(fields: [unidadeMedidaId], references: [id])
+  pesoBrutoPorUn     Decimal                       @db.Decimal(10, 3)
+  pesoLiquidoPorUn   Decimal                       @db.Decimal(10, 3)
+  precoPorUn         Decimal                       @db.Decimal(10, 2)
+  fatorCorrecaoPerda Decimal                       @db.Decimal(5, 4)
+  precoPorMedida     Decimal                       @db.Decimal(10, 2)
+  fichas             FichaTecnica[]
+  materiaPrima       ProdutoProcessadoMateriaPrima[]
+}
+
+model ProdutoProcessadoMateriaPrima {
+  produtoProcessadoId String
+  produtoProcessado   ProdutoProcessado @relation(fields: [produtoProcessadoId], references: [id], onDelete: Cascade)
+  materiaPrimaId      String
+  materiaPrima        ProdutoVendaDireta @relation(fields: [materiaPrimaId], references: [id], onDelete: Restrict)
+
+  @@id([produtoProcessadoId, materiaPrimaId])
+}
+
+model FichaTecnica {
+  id                    String        @id @default(uuid())
+  produtoId             String
+  produto               ProdutoProcessado @relation(fields: [produtoId], references: [id])
+  nome                  String
+  tipo                  String?
+  qtdProduzida          Decimal       @db.Decimal(10, 3)
+  custoInsumosTotal     Decimal       @db.Decimal(10, 2)
+  custosVariaveisTotais Decimal       @db.Decimal(10, 2)
+  itens                 FichaItem[]
+
+  @@index([produtoId])
+}
+
+model FichaItem {
+  id              String            @id @default(uuid())
+  fichaId         String
+  ficha           FichaTecnica      @relation(fields: [fichaId], references: [id])
+  materiaPrimaId  String
+  materiaPrima    ProdutoVendaDireta @relation("FichaMateriaPrima", fields: [materiaPrimaId], references: [id])
+  unidadeMedidaId String
+  unidade         UnidadeMedida     @relation(fields: [unidadeMedidaId], references: [id])
+  quant           Decimal           @db.Decimal(10, 3)
+  valorIndividual Decimal           @db.Decimal(10, 2)
+}
+
+model PrecificacaoRevenda {
+  id                            String  @id @default(uuid())
+  cod                           String
+  produto                       String
+  precoVendaAtual               Decimal @db.Decimal(10, 2)
+  cmv                           Decimal @db.Decimal(10, 2)
+  frete                         Decimal @db.Decimal(10, 2)
+  custoVariavel                 Decimal @db.Decimal(10, 2)
+  impostosPerc                  Decimal @db.Decimal(8, 4)
+  impostosValor                 Decimal @db.Decimal(10, 2)
+  taxaCartaoPerc                Decimal @db.Decimal(8, 4)
+  taxaCartaoValor               Decimal @db.Decimal(10, 2)
+  taxaAppPerc                   Decimal @db.Decimal(8, 4)
+  taxaAppValor                  Decimal @db.Decimal(10, 2)
+  comissaoPerc                  Decimal @db.Decimal(8, 4)
+  comissaoValor                 Decimal @db.Decimal(10, 2)
+  margemContribReais            Decimal @db.Decimal(10, 2)
+  margemContribPercentual       Decimal @db.Decimal(8, 4)
+  cmvReais                      Decimal @db.Decimal(10, 2)
+  cmvPercentual                 Decimal @db.Decimal(8, 4)
+  custosVariaveisReais          Decimal @db.Decimal(10, 2)
+  custosVariaveisPercentual     Decimal @db.Decimal(8, 4)
+  despesasVariaveisReais        Decimal @db.Decimal(10, 2)
+  despesasVariaveisPercentual   Decimal @db.Decimal(8, 4)
+
+  @@unique([cod])
+}
+
+model PrecificacaoProcessado {
+  id                            String  @id @default(uuid())
+  cod                           String
+  produto                       String
+  precoVendaAtual               Decimal @db.Decimal(10, 2)
+  cmv                           Decimal @db.Decimal(10, 2)
+  mod                           Decimal @db.Decimal(10, 2)
+  frete                         Decimal @db.Decimal(10, 2)
+  custoVariavel                 Decimal @db.Decimal(10, 2)
+  impostosPerc                  Decimal @db.Decimal(8, 4)
+  impostosValor                 Decimal @db.Decimal(10, 2)
+  taxaCartaoPerc                Decimal @db.Decimal(8, 4)
+  taxaCartaoValor               Decimal @db.Decimal(10, 2)
+  taxaAppPerc                   Decimal @db.Decimal(8, 4)
+  taxaAppValor                  Decimal @db.Decimal(10, 2)
+  comissaoPerc                  Decimal @db.Decimal(8, 4)
+  comissaoValor                 Decimal @db.Decimal(10, 2)
+  margemContribReais            Decimal @db.Decimal(10, 2)
+  margemContribPercentual       Decimal @db.Decimal(8, 4)
+  cpvReais                      Decimal @db.Decimal(10, 2)
+  cpvPercentual                 Decimal @db.Decimal(8, 4)
+  modReais                      Decimal @db.Decimal(10, 2)
+  modPercentual                 Decimal @db.Decimal(8, 4)
+  custosVariaveisReais          Decimal @db.Decimal(10, 2)
+  custosVariaveisPercentual     Decimal @db.Decimal(8, 4)
+  despesasVariaveisReais        Decimal @db.Decimal(10, 2)
+  despesasVariaveisPercentual   Decimal @db.Decimal(8, 4)
+
+  @@unique([cod])
+}
+
+model Simulacao {
+  id                      String  @id @default(uuid())
+  tipo                    String
+  codigo                  String
+  produto                 String
+  precoPraticado          Decimal @db.Decimal(10, 2)
+  previsaoVendas          Decimal @db.Decimal(12, 2)
+  faturamentoPrevisto     Decimal @db.Decimal(12, 2)
+  custosVariaveis         Decimal @db.Decimal(12, 2)
+  impostos                Decimal @db.Decimal(12, 2)
+  taxaCartao              Decimal @db.Decimal(12, 2)
+  taxaApp                 Decimal @db.Decimal(12, 2)
+  comissao                Decimal @db.Decimal(12, 2)
+  margemContribReais      Decimal @db.Decimal(12, 2)
+  margemContribPercentual Decimal @db.Decimal(8, 4)
+  rateioDespesasFixas     Decimal @db.Decimal(12, 2)
+  margemLucroReais        Decimal @db.Decimal(12, 2)
+  margemLucroPercentual   Decimal @db.Decimal(8, 4)
+  markupMultiplicador     Decimal @db.Decimal(8, 4)
+  percentualMix           Decimal @db.Decimal(8, 4)
+
+  @@index([tipo])
+}
+
+model Analise {
+  id                     String  @id @default(uuid())
+  tipo                   String
+  produtoId              String
+  precoVenda             Decimal @db.Decimal(10, 2)
+  custosVariaveis        Decimal @db.Decimal(10, 2)
+  custoProduto           Decimal @db.Decimal(10, 2)
+  frete                  Decimal @db.Decimal(10, 2)
+  despesasVariaveis      Decimal @db.Decimal(10, 2)
+  impostos               Decimal @db.Decimal(10, 2)
+  taxaMaquina            Decimal @db.Decimal(10, 2)
+  taxaApp                Decimal @db.Decimal(10, 2)
+  comissao               Decimal @db.Decimal(10, 2)
+  margemContrib          Decimal @db.Decimal(10, 2)
+  rateioFixas            Decimal @db.Decimal(10, 2)
+  margemLucro            Decimal @db.Decimal(10, 2)
+  markup                 Decimal @db.Decimal(8, 4)
+  lucroDesejadoPercentual Decimal @db.Decimal(8, 4)
+  precoSugerido          Decimal @db.Decimal(10, 2)
+
+  @@index([tipo])
+  @@index([produtoId])
+}
+
+model CategoriaDespesaFixa {
+  id          String   @id @default(uuid())
+  nome        String   @unique
+  descricao   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DespesaFixa {
+  id            String  @id @default(uuid())
+  categoria     String
+  descricao     String
+  valorMensal   Decimal @db.Decimal(10, 2)
+  diaVencimento Int
+  createdAt     DateTime @default(now())
+
+  @@index([categoria])
+}
+
+model Encargos {
+  id                             String  @id @default(uuid())
+  trabFerias30Perc               Decimal @db.Decimal(8, 4)
+  trab13Perc                     Decimal @db.Decimal(8, 4)
+  trab13FeriasPerc               Decimal @db.Decimal(8, 4)
+  socInssPerc                    Decimal @db.Decimal(8, 4)
+  socSatPerc                     Decimal @db.Decimal(8, 4)
+  socSalEducPerc                 Decimal @db.Decimal(8, 4)
+  socIncraSestSebraeSenatPerc    Decimal @db.Decimal(8, 4)
+  socFgtsPerc                    Decimal @db.Decimal(8, 4)
+  socFgtsRescisaoPerc            Decimal @db.Decimal(8, 4)
+  updatedAt                      DateTime @default(now())
+}
+
+model Colaborador {
+  id                  String  @id @default(uuid())
+  codigo              String  @unique
+  nome                String
+  salario             Decimal @db.Decimal(10, 2)
+  setor               String
+  cargo               String
+  dataContratacao     DateTime
+  encSociaisPerc      Decimal @db.Decimal(8, 4)
+  encTrabPerc         Decimal @db.Decimal(8, 4)
+  valeTransporte      Decimal @db.Decimal(10, 2)
+  valeRefeicao        Decimal @db.Decimal(10, 2)
+  convenioMedico      Decimal @db.Decimal(10, 2)
+  cargaHorariaMensal  Decimal @db.Decimal(10, 2)
+  valorHora           Decimal @db.Decimal(10, 2)
+
+  @@index([setor])
+}
+
+model PlanoDRE {
+  id           String @id @default(uuid())
+  codigo       String
+  nome         String
+  tipo         String
+  categoria    String?
+  subcategoria String?
+}
+
+model LancamentoDRE {
+  id            String   @id @default(uuid())
+  contaCodigo   String
+  data          DateTime
+  descricao     String
+  valor         Decimal  @db.Decimal(12, 2)
+  tipoPagamento String
+
+  @@index([contaCodigo])
+  @@index([data])
+}
+
+model EntradaReceita {
+  id        String   @id @default(uuid())
+  descricao String
+  valor     Decimal  @db.Decimal(12, 2)
+  data      DateTime
+  categoria String?
+  createdAt DateTime @default(now())
+
+  @@index([data])
+  @@index([categoria])
+}
+
+model EntradaDespesa {
+  id        String   @id @default(uuid())
+  descricao String
+  valor     Decimal  @db.Decimal(12, 2)
+  data      DateTime
+  categoria String?
+  createdAt DateTime @default(now())
+
+  @@index([data])
+  @@index([categoria])
+}
+
+model VendaImportada {
+  id        String   @id @default(uuid())
+  descricao String
+  valor     Decimal  @db.Decimal(12, 2)
+  data      DateTime
+  categoria String?
+  origem    String
+  createdAt DateTime @default(now())
+
+  @@index([data])
+  @@index([origem])
+}
+
+model DespesaImportada {
+  id        String   @id @default(uuid())
+  descricao String
+  valor     Decimal  @db.Decimal(12, 2)
+  data      DateTime
+  categoria String?
+  origem    String
+  createdAt DateTime @default(now())
+
+  @@index([data])
+  @@index([origem])
+}
+
+model FiscalXmlDocument {
+  id           String            @id @default(uuid())
+  chave        String            @unique
+  cnpj         String
+  modelo       String
+  serie        String
+  numero       String
+  dataEmissao  DateTime
+  storageUrl   String
+  manifestado  Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  eventos      FiscalXmlEvent[]
+
+  @@index([cnpj])
+  @@index([dataEmissao])
+}
+
+model FiscalXmlEvent {
+  id          String            @id @default(uuid())
+  documentId  String
+  document    FiscalXmlDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tipo        String
+  payload     Json?
+  createdAt   DateTime          @default(now())
+
+  @@index([documentId])
+  @@index([tipo])
+}
+
+model FiscalEmissionRequest {
+  id           String   @id @default(uuid())
+  tipo         String
+  provider     String
+  destinatario String
+  valor        Decimal  @db.Decimal(12, 2)
+  status       String
+  protocolo    String   @unique
+  payload      Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model FiscalSpedJob {
+  id        String   @id @default(uuid())
+  periodo   String
+  tipo      String
+  status    String
+  arquivo   String
+  createdAt DateTime @default(now())
+
+  @@index([periodo])
+  @@index([tipo])
+}
+
+model FiscalNfseConfig {
+  id           String   @id @default(uuid())
+  ambiente     String
+  municipio    String
+  perfil       String
+  provider     String
+  usuario      String?
+  senha        String?
+  certificado  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AiPrompt {
+  id              String    @id @default(uuid())
+  name            String
+  scope           String
+  entities        String[]  @default([])
+  inputs          Json
+  output          String
+  llmModel        String
+  llmMode         String
+  temperature     Decimal   @db.Decimal(4, 3)
+  ragCollections  String[]  @default([])
+  tools           String[]  @default([])
+  policy          Json?
+  version         String
+  ownerRole       String
+  reviewers       String[]  @default([])
+  status          String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  executions      AiExecution[]
+
+  @@unique([name, scope])
+}
+
+model AiExecution {
+  id               String    @id @default(uuid())
+  promptId         String?
+  prompt           AiPrompt? @relation(fields: [promptId], references: [id], onDelete: SetNull)
+  model            String
+  mode             String
+  provider         String
+  input            Json
+  outputJson       Json?
+  outputText       String?
+  toolCalls        Json?
+  usageInputTokens Int       @default(0)
+  usageOutputTokens Int      @default(0)
+  usageCost        Decimal   @db.Decimal(12, 6) @default(0)
+  latencyMs        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  createdByRole    String?
+
+  @@index([promptId])
+  @@index([createdAt])
+}
+
+model RagCollection {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String        @unique
+  source      String
+  status      String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  documents   RagDocument[]
+}
+
+model RagDocument {
+  id            String        @id @default(uuid())
+  collectionId  String
+  collection    RagCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  title         String
+  sourceUrl     String?
+  metadata      Json?
+  status        String        @default("pending")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([collectionId])
+  @@index([status])
+}
+
+model ComplianceMonitoring {
+  id          String   @id @default(uuid())
+  empresaId   String
+  empresa     Empresa  @relation(fields: [empresaId], references: [id])
+  titulo      String
+  modulo      String
+  categoria   String
+  descricao   String?
+  status      String
+  severidade  String
+  detectedAt  DateTime @default(now())
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  alerts      ComplianceAlert[]
+  riscos      ComplianceRiskAssessment[]
+
+  @@index([empresaId, modulo])
+  @@index([empresaId, status])
+}
+
+model ComplianceAlert {
+  id             String   @id @default(uuid())
+  empresaId      String
+  empresa        Empresa  @relation(fields: [empresaId], references: [id])
+  monitoringId   String?
+  monitoring     ComplianceMonitoring? @relation(fields: [monitoringId], references: [id], onDelete: SetNull)
+  canal          String
+  destinatarios  String[]
+  mensagem       String
+  status         String
+  triggeredAt    DateTime @default(now())
+  acknowledgedAt DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([empresaId, status])
+  @@index([monitoringId])
+}
+
+model ComplianceRiskAssessment {
+  id            String   @id @default(uuid())
+  empresaId     String
+  empresa       Empresa  @relation(fields: [empresaId], references: [id])
+  monitoringId  String?
+  monitoring    ComplianceMonitoring? @relation(fields: [monitoringId], references: [id], onDelete: SetNull)
+  modulo        String
+  risco         String
+  score         Decimal @db.Decimal(5, 2)
+  probabilidade Decimal @db.Decimal(5, 2)
+  impacto       Decimal @db.Decimal(5, 2)
+  status        String
+  recomendacoes String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  @@index([empresaId, modulo])
+}
+
+model ComplianceReport {
+  id            String   @id @default(uuid())
+  empresaId     String
+  empresa       Empresa  @relation(fields: [empresaId], references: [id])
+  tipo          String
+  periodoInicio DateTime
+  periodoFim    DateTime
+  formato       String
+  status        String
+  destino       String[]
+  arquivoUrl    String?
+  geradoEm      DateTime?
+  criadoEm      DateTime @default(now())
+
+  @@index([empresaId, tipo])
+}
+
+model ComplianceAuditLog {
+  id         String   @id @default(uuid())
+  empresaId  String
+  empresa    Empresa  @relation(fields: [empresaId], references: [id])
+  usuario    String
+  acao       String
+  entidade   String
+  detalhes   Json?
+  occurredAt DateTime @default(now())
+
+  @@index([empresaId, entidade])
+  @@index([empresaId, occurredAt])
+}
+
+model ComplianceWorkflow {
+  id           String   @id @default(uuid())
+  empresaId    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id])
+  nome         String
+  tipo         String
+  descricao    String?
+  etapas       Json
+  status       String
+  requerMfa    Boolean  @default(false)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([empresaId, tipo])
+}
+
+model CompliancePolicy {
+  id             String   @id @default(uuid())
+  empresaId      String
+  empresa        Empresa  @relation(fields: [empresaId], references: [id])
+  titulo         String
+  categoria      String
+  versao         String
+  vigenteDesde   DateTime
+  vigenteAte     DateTime?
+  urlDocumento   String?
+  obrigatoria    Boolean  @default(false)
+  status         String
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  @@index([empresaId, categoria])
+}
+
+model ComplianceTraining {
+  id              String   @id @default(uuid())
+  empresaId       String
+  empresa         Empresa  @relation(fields: [empresaId], references: [id])
+  curso           String
+  categoria       String
+  cargaHoraria    Decimal @db.Decimal(6, 2)
+  responsavel     String
+  prazoConclusao  DateTime
+  status          String
+  certificadosUrl String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@index([empresaId, categoria])
+  @@index([empresaId, status])
+}
+
+model ComplianceIncident {
+  id             String   @id @default(uuid())
+  empresaId      String
+  empresa        Empresa  @relation(fields: [empresaId], references: [id])
+  titulo         String
+  categoria      String
+  descricao      String
+  status         String
+  severidade     String
+  impacto        String
+  responsavel    String
+  acaoCorretiva  String?
+  detectedAt     DateTime @default(now())
+  resolvedAt     DateTime?
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  @@index([empresaId, categoria])
+  @@index([empresaId, status])
+}
+
+model ComplianceScenario {
+  id              String   @id @default(uuid())
+  empresaId       String
+  empresa         Empresa  @relation(fields: [empresaId], references: [id])
+  titulo          String
+  regulacaoAlvo   String
+  descricao       String?
+  impactoPrevisto Decimal @db.Decimal(12, 2)
+  recomendacoes   String?
+  status          String
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@index([empresaId, regulacaoAlvo])
+}
+
+model SecuritySettings {
+  id                        String   @id @default(uuid())
+  empresaId                 String?  @unique
+  empresa                   Empresa? @relation(fields: [empresaId], references: [id])
+  requireMfa                Boolean  @default(true)
+  allowedFactors            String   @default("totp,sms,email")
+  passwordMinLength         Int      @default(12)
+  passwordRequireUppercase  Boolean  @default(true)
+  passwordRequireNumber     Boolean  @default(true)
+  passwordRequireSymbol     Boolean  @default(true)
+  passwordRotationDays      Int      @default(90)
+  sessionTimeoutMinutes     Int      @default(30)
+  sessionMaxDevices         Int      @default(5)
+  ssoEnabled                Boolean  @default(false)
+  ssoProvider               String?
+  encryptionAtRest          Boolean  @default(true)
+  encryptionInTransit       Boolean  @default(true)
+  encryptionInUse           Boolean  @default(false)
+  keyRotationDays           Int      @default(180)
+  dataClassificationMatrix  String?
+  dataMaskingPolicies       String?
+  logRetentionDays          Int      @default(365)
+  anomalyDetectionEnabled   Boolean  @default(false)
+  wafEnabled                Boolean  @default(false)
+  vulnerabilityScanSchedule String?
+  complianceContact         String?
+  backupFrequencyHours      Int      @default(24)
+  zeroTrustEnabled          Boolean  @default(false)
+  apiRateLimitPerMinute     Int      @default(600)
+  apiTokenRotationDays      Int      @default(30)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model SecurityIncident {
+  id           String   @id @default(uuid())
+  empresaId    String?
+  empresa      Empresa? @relation(fields: [empresaId], references: [id], onDelete: SetNull)
+  titulo       String
+  severidade   String
+  status       String   @default("aberto")
+  descricao    String?
+  reportedBy   String?
+  detectedAt   DateTime @default(now())
+  resolvedAt   DateTime?
+  planoAcao    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([empresaId, status])
+}
+
+model SecurityTraining {
+  id              String   @id @default(uuid())
+  empresaId       String?
+  empresa         Empresa? @relation(fields: [empresaId], references: [id], onDelete: SetNull)
+  titulo          String
+  publicoAlvo     String
+  descricao       String?
+  cargaHoraria    Int
+  dueDate         DateTime?
+  completionRate  Decimal? @db.Decimal(5, 2)
+  participantes   Int      @default(0)
+  responsavel     String?
+  recursos        String?
+  status          String   @default("planejado")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([empresaId, status])
+}
+
+model SecurityAuditLog {
+  id         String   @id @default(uuid())
+  empresaId  String?
+  empresa    Empresa? @relation(fields: [empresaId], references: [id], onDelete: SetNull)
+  actor      String
+  acao       String
+  contexto   String?
+  origem     String?
+  recordedAt DateTime @default(now())
+
+  @@index([empresaId, recordedAt])
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([token])
+  @@id([identifier, token])
+}
